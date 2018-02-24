@@ -1,0 +1,7 @@
+[chrome_conf]
+path = F:\tools\chromedriver.exe
+
+[xero_web]
+login_user = immizhj@gmail.com
+login_pwd = 793hzrE2
+login_url = http://www.xero.com/
