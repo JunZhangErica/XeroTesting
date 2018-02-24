@@ -1,0 +1,61 @@
+[testAddBankAccountBasic:org_dict]
+input_name_OrganisationName  = QATest1
+input_id_countryCmb-inputEl = New Zealand,China,New Zealand,
+input_id_cmbTimeZone-inputEl = (UTC+12:00) Auckland,(UTC+08:00) Beijing,(UTC+08:00) Beijing
+input_id_*industrysearchcombofield = Marine Engineering,Roof Plumbing,Roof Plumbing 
+input_id_currencyCmb-inputEl = New Zealand Dollar,Bitcoin,New Zealand Dollar
+[testAddBankAccountBasic:account_dict]
+input_id_*xui-searchfield = ANZ (NZ)
+input_id_*accountname = abc
+input_id_*accounttype = day-to-day
+input_id_*accountnumber = 2719894291
+
+[testAddBankAccountUnicodeNum:org_dict]
+input_name_OrganisationName  = QATest2
+input_id_countryCmb-inputEl = New Zealand,China,New Zealand,
+input_id_cmbTimeZone-inputEl = (UTC+08:00) Beijing,(UTC+12:00) Auckland
+input_id_*industrysearchcombofield = Marine Engineering,Roof Plumbing
+input_id_currencyCmb-inputEl = New Zealand Dollar,Bitcoin
+[testAddBankAccountUnicodeNum:account_dict]
+input_id_*xui-searchfield = ANZ (NZ)
+input_id_*accountname = def
+input_id_*accounttype = day-to-day
+input_id_*accountnumber = 张君
+
+[testAddBankAccountUnicodeName:org_dict]
+input_name_OrganisationName  = QATest3
+input_id_countryCmb-inputEl = New Zealand,China
+input_id_cmbTimeZone-inputEl = (UTC+08:00) Beijing,(UTC+12:00) Auckland
+input_id_*industrysearchcombofield = Marine Engineering,Roof Plumbing
+input_id_currencyCmb-inputEl = Bitcoin,New Zealand Dollar
+[testAddBankAccountUnicodeName:account_dict]
+input_id_*xui-searchfield = ANZ (NZ)
+input_id_*accountname = 张君
+input_id_*accounttype = day-to-day
+input_id_*accountnumber = 2719894293
+
+[testAddBankAccountLongNum:org_dict]
+input_name_OrganisationName  = QATest3
+input_id_countryCmb-inputEl = New Zealand,China
+input_id_cmbTimeZone-inputEl = (UTC+08:00) Beijing,(UTC+12:00) Auckland
+input_id_*industrysearchcombofield = Marine Engineering,Roof Plumbing
+input_id_currencyCmb-inputEl = Bitcoin,New Zealand Dollar
+input_id_gstChk-inputEl = 1,0
+[testAddBankAccountLongNum:account_dict]
+input_id_*xui-searchfield = ANZ (NZ)
+input_id_*accountname = 张君
+input_id_*accounttype = day-to-day
+input_id_*accountnumber = 2719894293ue0umre0 t90wm 0wmrq efre0
+
+[testAddBankAccountLongNum:org_dict]
+input_name_OrganisationName  = QATest3
+input_id_countryCmb-inputEl = New Zealand,China
+input_id_cmbTimeZone-inputEl = (UTC+08:00) Beijing,(UTC+12:00) Auckland
+input_id_*industrysearchcombofield = Marine Engineering,Roof Plumbing
+input_id_currencyCmb-inputEl = Bitcoin,New Zealand Dollar
+input_id_gstChk-inputEl = 1,0
+[testAddBankAccountLongNum:account_dict]
+input_id_*xui-searchfield = ANZ (NZ)
+input_id_*accountname = 张君
+input_id_*accounttype = day-to-day
+input_id_*accountnumber = 2719894293ue0umre0 t90wm 0wmrq efre0
