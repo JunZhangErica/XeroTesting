@@ -11,14 +11,14 @@ from selenium.common.exceptions import NoSuchElementException as NoSuchElementEx
 import time
 import traceback
 
-import sys 
-reload(sys) 
-sys.setdefaultencoding("utf-8")
-
 # import local libs
 from lib.TestObject import TestObject
 from lib.OrganizationOps import OrganizationOps
 from utils.GeneralUtils import *
+
+import sys 
+reload(sys) 
+sys.setdefaultencoding("utf-8")
 
 class TestBankAccountOps(TestObject):    
     ORG_CUSTOMIZED = False
@@ -28,10 +28,10 @@ class TestBankAccountOps(TestObject):
     
     def __init__(self, logger, configObj):
         super(TestBankAccountOps, self).__init__(logger, configObj)
-        self.test_list = [ 'testAddBankAccountBasic' ]
-                          #'testAddBankAccountUnicodeNum', 'testAddBankAccountUnicodeName', 
-                          #'testAddBankAccountLongNum', 'testAddBankAccountLongName', 'testAddMultiBankAccounts',
-                          #'testAddMultiSameBankAccount']
+        self.test_list = ['testAddBankAccountBasic','testAddBankAccountUnicodeNum', 'testAddBankAccountUnicodeName', 
+                          'testAddBankAccountLongNum', 'testAddBankAccountLongName', 'testAddMultiBankAccounts',
+                          'testAddMultiSameBankAccount']
+                           
         self.org_dict = {}
         self.account_dict = {}
         self.orgObj = OrganizationOps(self.driver, self.logger, self.configObj)
@@ -45,7 +45,8 @@ class TestBankAccountOps(TestObject):
            
     def cleanup(self):
         self.orgObj.setDriver(self.driver)
-        self.orgObj.cancleAllOrganization("Other")
+        self.orgObj.cancleAllOrganization("Added by mistake")
+        TestBankAccountOps.ORG_CUSTOMIZED = False
     
     def showBankAccounts(self):
         """
@@ -86,12 +87,12 @@ class TestBankAccountOps(TestObject):
         elems = self.driver.find_elements_by_xpath(xpath)
         for elem in elems :
             if elem.text in elem_val and \
-               strlen(elem.text) > max_len:
+               len(elem_val) > max_len:
                 exceeded = True 
                 break
             
         if not exceeded:
-            self.logger.error(" Account %s not shows up as expected", name)
+            self.logger.error(" Account %s not shows up as expected", elem_val)
             result = False
         return result                    
         
@@ -222,18 +223,41 @@ class TestBankAccountOps(TestObject):
             if len(type_elems) != account_input_len:
                 raise Exception("Failed to add another bank account")
             
+            xpath = "//input[contains(@id,'accountname')]"
+            name_elems = self.driver.find_elements_by_xpath(xpath)
+            num_xpath = "//input[contains(@id,'accountnumber')]"
+            num_elems = self.driver.find_elements_by_xpath(num_xpath)
+            
             self.logger.info("STEP: select type at first")
             index = 0
+            
             while index < account_input_len:
                 account_type = getValueforDict(data_dicts[index], 'accounttype') 
                 self.logger.debug("input account type %s", account_type)
                 id = type_elems[index].get_attribute('id')
                 self.driver = setReadOnlyElemVal(self.driver, id, account_type)
-                type_elems = self.driver.find_elements_by_xpath(xpath)
-                #type_elems[index].send_keys(account_type)
+                """
+                type_elems[index].click()
                 time.sleep(5)
+                
+                elem_i = '0'
+                if account_type in "Everyday (day-to-day)":
+                    elem_i = '0'
+                elif account_type in "Loan":
+                    elem_i = '1'
+                elif account_type in "Term Deposit":
+                    elem_i = '2'
+                elif account_type in "Credit Card":
+                    elem_i = '3'
+                else:
+                    elem_i = '4'
+                type_js = "document.querySelectorAll('.ba-combo-list-item')["+elem_i+"].click()"
+                self.driver.execute_script(type_js)
+                """
+                time.sleep(5)
+                
                 index += 1
-            
+                
             xpath = "//input[contains(@id,'accountname')]"
             name_elems = self.driver.find_elements_by_xpath(xpath)
             num_xpath = "//input[contains(@id,'accountnumber')]"
@@ -247,31 +271,29 @@ class TestBankAccountOps(TestObject):
                 time.sleep(2)
                 
                 number = getValueforDict(data_dicts[index], 'accountnumber')
-                id = num_elems[index].get_attribute('id')
+                type_elems[index].send_keys(Keys.TAB + (unicode(number).encode('utf-8')))
+                time.sleep(5)
                 
-                class_attr = "xui-input x-form-required-field x-form-text x-form-text-default"
-                self.driver = enElemVisible(self.driver, id, number, 'class', class_attr)
-                num_elems = self.driver.find_elements_by_xpath(num_xpath)
-                #num_elems[index].send_keys(number) 
+                #num_elems[index].send_keys(number)
                 time.sleep(2)
                 index = index + 1
                             
             self.logger.debug("Step: post request of adding bank account")
             xpath = "//span[contains(@id,'common-button-submit')]"
-            self.driver.click()
+            self.driver.find_element_by_xpath(xpath).click()
             
             xpath = "//span[@data-automationid='Add Bank Account-button']"
-            WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.PATH, xpath)))
+            WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
             for data_dict in data_dicts:
                 self.logger.info("STEP: verify bank account to be added properly")
-                account_name = getValueforDict(data_dicts[index], 'accountname')
-                account_type = getValueforDict(data_dicts[index], 'accounttype')
-                number = getValueforDict(data_dicts[index], 'accountnumber')
+                account_name = getValueforDict(data_dict, 'accountname')
+                account_type = getValueforDict(data_dict, 'accounttype')
+                number = getValueforDict(data_dict, 'accountnumber')
                 if "Credit" in account_type:
                     TestBankAccountOps.MAX_NUM_LEN = 4
                 else:
                     TestBankAccountOps.MAX_NUM_LEN = 20
-                result = result & self.checkBankAccount(account_name, number)
+                result = result and self.checkBankAccount(account_name, number)
                 
         except Exception, e:
             self.logger.error("Failed to add accounts with exception: %s", 
@@ -283,7 +305,7 @@ class TestBankAccountOps(TestObject):
     def customizeDict(self, val_dict):
         """
         customize account info into dicts
-        @account_dictï¼šeach item can be splitted by ","
+        @account_dict£ºeach item can be splitted by ","
         @@return data_dicts
         """
         to_be_customized = 0
@@ -313,19 +335,20 @@ class TestBankAccountOps(TestObject):
     def baseTestAddBankAccount(self):
         """
         basic test process of adding bank account
-        @data_dictsï¼šadd bank accounts for all organizations
+        @data_dicts£ºadd bank accounts for all organizations
         @@return True for success; False for otherwise
         """
         result = True
         try:
+            
             self.logger.info("STEP: create organizations")
             self.org_dicts = self.customizeDict(self.org_dict)
-                
+   
             if not TestBankAccountOps.ORG_CUSTOMIZED: 
                 self.logger.debug("will create %d organizations", len(self.org_dicts))
                 for org_dict in self.org_dicts:
                     self.orgObj.setDriver(self.driver)
-                    result = result & self.orgObj.addOrganization(org_dict, 
+                    self.orgObj.addOrganization(org_dict, 
                                                                   ["countryCmb", 
                                                                    "cmbTimeZone", 
                                                                    "currencyCmb"])
@@ -334,10 +357,14 @@ class TestBankAccountOps(TestObject):
             self.logger.info("STEP: add bank account")
             data_dicts = self.customizeDict(self.account_dict)
             self.logger.debug("data_dicts len = %d", len(data_dicts))
-            for org_dict in self.org_dicts:
-                name = getValueforDict(org_dict, 'OrganisationName')
-                result = result & self.addBankAccount(name, data_dicts)
             
+            for org_dict in self.org_dicts:
+                for key in org_dict.keys():
+                    self.logger.debug("key=%s, value=%s", key, org_dict[key])
+                name = getValueforDict(org_dict, 'OrganisationName')
+                self.logger.debug("org_dicts len = %d, name=%s", len(self.org_dicts), name)
+                result = result and self.addBankAccount(name, data_dicts)
+
         except Exception, e:
             self.logger.error("Failed on adding bank account with exception %s", traceback.format_exc())
             result = False
@@ -370,13 +397,18 @@ class TestBankAccountOps(TestObject):
         return self.baseTestAddBankAccount()            
     
     def testAddBankAccountUnicodeNum(self): 
-        return (not self.baseTestAddBankAccount())
+        result = True
+        try:
+            result = self.baseTestAddBankAccount()
+        except Exception, e:
+            result = False
+        return ( not result )
         
     def testAddBankAccountUnicodeName(self):  
         return self.baseTestAddBankAccount()
     
     def testAddBankAccountLongNum(self):   
-        return self.baseTestAddBankAccount(data_dicts)
+        return self.baseTestAddBankAccount()
     
     def testAddBankAccountLongName(self):   
         return self.baseTestAddBankAccount()
@@ -384,7 +416,12 @@ class TestBankAccountOps(TestObject):
     def testAddMultiBankAccounts(self):  
         return self.baseTestAddBankAccount()
     
-    def testAddMultiSameBankAccount(self):  
-        return self.baseTestAddBankAccount()
+    def testAddMultiSameBankAccount(self): 
+        result = True
+        try:
+            result = self.baseTestAddBankAccount()
+        except Exception, e:
+            result = False
+        return ( not result )
     
         

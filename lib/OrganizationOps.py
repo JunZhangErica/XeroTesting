@@ -8,12 +8,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import InvalidElementStateException as InvalidElementStateException
+from selenium.common.exceptions import TimeoutException as TimeoutException
+
+from utils.GeneralUtils import *
 
 import sys 
 reload(sys) 
 sys.setdefaultencoding("utf-8")
 
-from utils.GeneralUtils import *
 
 class OrganizationOps(object):
     """
@@ -42,7 +44,11 @@ class OrganizationOps(object):
                 return True
             except Exception, e:
                 self.logger.info("STEP: show organization list")
-                
+            
+            my_dashboard = "https://my.xero.com/"
+            self.driver.get(my_dashboard)
+            
+            """    
             self.logger.debug("Step: select Account and Home")
             xpath = "//div[@class='xn-h-user']/a[@class='username']"
             account_elem = self.driver.find_element_by_xpath(xpath)
@@ -54,10 +60,13 @@ class OrganizationOps(object):
             xpath = "//a[@href ='/!xkcD/Dashboard'][text()='Home']"
             home_elem = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
             home_elem.click()
-            
-            self.logger.debug("Step: verify that organization list shows up")
-            xpath = "//a[contains(text(), 'Add an organisation')]"
-            WebDriverWait(self.driver, 40).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+            """
+            try:            
+                self.logger.debug("Step: verify that organization list shows up")
+                xpath = "//a[contains(text(), 'Add an organisation')]"
+                WebDriverWait(self.driver, 40).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+            except TimeoutException:
+                self.driver.find_element_by_link_text("Start Trial")
         except Exception, e:
             self.logger.error("Failed on show organizations with exception: %s", traceback.format_exc())
             result = False
@@ -76,8 +85,8 @@ class OrganizationOps(object):
             if not result:
                 return result
             
-            self.driver.find_element_by_link_text(name).click()
             WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, name)))
+            self.driver.find_element_by_link_text(name).click()
             
             xpath = "//h2[@class='org-name']/a[text()='"+name+"']"
             WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
@@ -88,7 +97,7 @@ class OrganizationOps(object):
         return result 
     
     
-    def addOrganization(self, org_dict, sorted_keys=None):
+    def addOrganization(self, org_dict_in, sorted_keys=None):
         """
         Add an organization
         @org_dict: organization dictionary of xpath mapped to value
@@ -99,20 +108,24 @@ class OrganizationOps(object):
         self.logger.info("STEP: add an organization")
         result = True
         try:
-            result = self.showOrganizationList()
-            if not result:
-                self.logger.debug("program should not be here")
-                return result
-            
-            self.logger.debug("Step: open window of adding organization")
-            xpath = "//a[contains(text(), 'Add an organisation')]"
-            org_elem = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
-            org_elem.click()
-            
-            self.logger.debug("Step: verify that the proper web page is loaded")
-            xpath = "//div[@id = 'page_title']/div/h2[contains(text(),'Add your organisation')]"
-            WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, "Start Trial")))
-            
+            org_dict = {}
+            for key in org_dict_in.keys():
+                org_dict[key] = org_dict_in[key]
+                
+            try:
+                self.driver.find_element_by_link_text("Start Trial")
+            except Exception, e:
+                result = self.showOrganizationList()
+                if not result:
+                    return result
+                
+                self.logger.debug("Step: open window of adding organization")
+                xpath = "//a[contains(text(), 'Add an organisation')]"
+                org_elem = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+                org_elem.click()
+                
+                self.logger.debug("Step: verify that the proper web page is loaded")
+                WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, "Start Trial")))
             
             self.logger.debug("Step: input all organization data and post request")
             if sorted_keys == None:
@@ -171,15 +184,52 @@ class OrganizationOps(object):
             #      so just sleep here
             time.sleep(60)
             
-            my_dashboard = "https://my.xero.com/!xkcD/Dashboard"
+            my_dashboard = "https://my.xero.com/"
             self.driver.get(my_dashboard)
-            
             xpath = "//a[@class='username']"
             WebDriverWait(self.driver, 60).until(EC.visibility_of_element_located((By.XPATH, xpath)))
         except Exception, e:
             self.logger.error("Failed on adding organization with exception: %s", traceback.format_exc())
             result = False
         return result 
+
+    def __getCancleNums__(self):
+        """
+        get cancel links
+        @@return element list or exception
+        """
+        cancel_list = []
+        try:
+            xpath = "//div[@class='x-page page-dashboard']/form[@action='/!xkcD/Dashboard']"
+            element = self.driver.find_element_by_xpath(xpath)
+            xpath = "./div[@class='x-content']/section[@class='x-column']"
+            element = element.find_element_by_xpath(xpath)
+            xpath = "./div[contains(@id,'grid')][@class='x-grid-container a-fadein']"
+            element = element.find_element_by_xpath(xpath)
+            xpath = "./div[contains(@id,'ext-comp')][contains(@class,'x-panel-default')]"
+            element = element.find_element_by_xpath(xpath)
+            xpath = "./div[contains(@id,'ext-comp')][contains(@class, 'x-panel-body-default')]"
+            element = element.find_element_by_xpath(xpath)
+            xpath = "./div[contains(@id, 'gridview')]"
+            element = element.find_element_by_xpath(xpath)
+            xpath = "./table[contains(@id,'gridview')]/tbody[contains(@id,'gridview')]"
+            element = element.find_element_by_xpath(xpath)
+            xpath = "./tr[contains(@id,'gridview')]"
+            elems = element.find_elements_by_xpath(xpath)
+            
+            cancel_list = []
+            for elem in elems:
+                xpath = "./td[contains(@class,'x-grid-cell-last')]"
+                tmp_elems = elem.find_elements_by_xpath(xpath)
+                xpath = "./div[@class='x-grid-cell-inner']"
+                tmp_elems = tmp_elems[0].find_elements_by_xpath(xpath)
+                xpath = "./div[@class='top']"
+                tmp_elems = tmp_elems[0].find_elements_by_xpath(xpath)
+                element = tmp_elems[0].find_element_by_link_text("Cancel")
+                cancel_list.append(element)
+        except Exception, e:
+            return []
+        return cancel_list
 
 
     def cancleAllOrganization(self, reason):
@@ -191,8 +241,12 @@ class OrganizationOps(object):
         self.logger.info("STEP: remove all organizations")
         result = True
         try:
-            xpath = "//div[@class='top']/a[@class='delete'][text()='Cancel']"
-            elems = self.driver.find_elements_by_xpath(xpath)
+            result = self.showOrganizationList()
+            if not result:
+                return result
+            time.sleep(5)
+            elems = self.__getCancleNums__()            
+            self.logger.debug("%d number of cancels detected", len(elems))
             elems_len = len(elems)
             while elems_len > 0:
                 elem = elems[-1]
@@ -201,25 +255,31 @@ class OrganizationOps(object):
                 
                 self.logger.debug("Step: verify cancellation need to be confirmed")
                 xpath = "//span[text()='Confirm cancellation']"
-                cancel_elem = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+                cancel_elem = WebDriverWait(self.driver, 40).until(EC.visibility_of_element_located((By.XPATH, xpath)))
                 cancel_elem.click()
                 
                 self.logger.debug("Step: select reason to cancel organization")
                 xpath = "//label[contains(text(), '"+reason+"')]"
                 radio_elem = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
                 radio_elem.click()
+                time.sleep(2)
                 
+                self.logger.debug("Step: input reason")
+                xpath = "//span[text()='Send feedback'][@class='x-btn-inner x-btn-inner-center']"
+                send_btn = self.driver.find_element_by_xpath(xpath)
+                send_btn.click()
+                time.sleep(2)
+                 
                 self.logger.debug("Step: verify that organization is deleted")
-                WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, "Cancel")))
-                elems_after = len(self.driver.find_elements_by_link_text("Cancel"))
+                #WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, "Cancel")))
+                elems = self.__getCancleNums__()
+                elems_after = len(elems)
                 if(elems_after >= elems_len):
                     self.logger.error("Failed to remove organization successfully")
                     result = False
-                elems.remove(elem)
-                elems_len -= 1
+                elems_len = elems_after
                 
         except Exception, e:
-            self.logger.error("Failed on removing organization with exception: %s", traceback.format_exc())
-            result = False
+            self.logger.warning("Failed on removing organization with exception: %s", traceback.format_exc())
         return result 
    

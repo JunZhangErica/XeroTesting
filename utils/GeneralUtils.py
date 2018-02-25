@@ -59,20 +59,10 @@ def delDictwithKeyword(dict, keyword):
     
     
 def setReadOnlyElemVal(driver, id, val):
-    """
-    force to set some value 
-    """
     js = "document.getElementById('"+id+"').removeAttribute('readonly')"
     driver.execute_script(js)
     driver.find_element_by_id(id).send_keys(val)
     return driver
 
-def enElemVisible(driver, id, val, attr_name, attr_val):
-    """
-    force to set some value 
-    """
-    js = "document.getElementById('"+id+"').setAttribute('"+attr_name+"', '"+attr_val+"')"
-    driver.execute_script(js)
-    driver.find_element_by_id(id).send_keys(val)
-    return driver
+
     

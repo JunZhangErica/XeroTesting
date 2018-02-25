@@ -77,21 +77,12 @@ class LoginOut(object):
             self.driver.find_element_by_xpath("//input[@name='password']").send_keys(password)
             self.driver.find_element_by_xpath("//button[@type='submit'][contains(text(), 'Login')]").click()
             
-            try:
-                xpath = "//div[contains(@class,'xui-page-title')][contains(text(),'Welcome to Xero')]"
-                WebDriverWait(self.driver, 40).until(
-                    EC.visibility_of_element_located((By.XPATH, xpath)))
-            except Exception, e:
-                xpath = "//a[contains(text(), 'Add an organisation')]"
-                self.driver.find_element_by_xpath(xpath) 
-            
             # check expect result to match real-time result
             self.logger.info("Step: check real-time result to be as expected")
             login_evidence = None
             if login_type == 1:
                 self.logger.debug("Expected result: logged in Xero.com successfully!")
                 try:
-            
                     try:
                         xpath = "//div[contains(@class,'xui-page-title')][contains(text(),'Welcome to Xero')]"
                         WebDriverWait(self.driver, 40).until(
@@ -100,7 +91,7 @@ class LoginOut(object):
                         xpath = "//a[contains(text(), 'Add an organisation')]"
                         self.driver.find_element_by_xpath(xpath) 
                 except Exception, e:
-                    return False
+                    self.driver.find_element_by_link_text('Logout')
                 LoginOut.HAS_LOGGEDIN = True
             else:
                 base_xpath = "//div[@class='x-boxed warning']"
@@ -114,8 +105,7 @@ class LoginOut(object):
                     self.logger.debug("Expected result: messages, that account has already been locked, shows up") 
                     xpath = base_xpath + "p[contains(text(), 'Your account has been temporarily locked']"  
                 WebDriverWait(self.driver, 20).until(
-                    EC.visibility_of_element_located((By.XPATH, xpath)))
-                                               
+                    EC.visibility_of_element_located((By.XPATH, xpath)))                                             
         except Exception, e:
             self.logger.error("Failed on login with exception: %s", traceback.format_exc())
             result = False

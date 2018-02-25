@@ -10,8 +10,6 @@ import traceback
 
 #from urlparse import urlparse
 
-from utils.GeneralUtils import ConfigParserUtil
-
 from selenium import webdriver
 
 import logging
@@ -19,6 +17,8 @@ from selenium.webdriver.remote.remote_connection import LOGGER
 from lib.ToolConfig import ToolConfig
 from lib.LoginOut import LoginOut
 from selenium.webdriver.chrome.options import Options
+
+from utils.GeneralUtils import ConfigParserUtil
 
 import sys 
 reload(sys) 
@@ -78,7 +78,7 @@ class TestObject(object):
                                 skey += "[contains(" +"@" + item_vals[1] + ",\'" + tmp_vals[1] +"\')]"
                             else:
                                 skey += "[@" + item_vals[1] + "=\'"  + item_vals[2] +"\']"
-                        tmp_dict[skey] = unicode(value)
+                        tmp_dict[skey] = value #unicode(value)
                         self.logger.debug("key = %s, value = %s", skey, value)
                     self.config_dicts[vals[1]] = tmp_dict
         except Exception, e:
