@@ -27,6 +27,7 @@ class OrganizationOps(object):
         self.driver = driver
         self.logger = logger
         self.configObj = configObj
+        self.is_GST = True
         
     def setDriver(self, driver):
         self.driver = driver
