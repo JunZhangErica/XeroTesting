@@ -20,22 +20,28 @@ import sys
 reload(sys) 
 sys.setdefaultencoding("utf-8")
 
-class TestBankAccountOps(TestObject):    
-    ORG_CUSTOMIZED = False
+class TestBankAccountOps(TestObject):  
     MAX_NAME_LEN = 30
     MAX_NUM_LEN = 20
-    ORG_ORDER = 0
     
     def __init__(self, logger, configObj):
         super(TestBankAccountOps, self).__init__(logger, configObj)
-        self.test_list = ['testAddBankAccountBasic','testAddBankAccountUnicodeNum', 'testAddBankAccountUnicodeName', 
-                          'testAddBankAccountLongNum', 'testAddBankAccountLongName', 'testAddMultiBankAccounts',
-                          'testAddMultiSameBankAccount']
+        self.test_list = ['testAddBankAccountLocal','testAddBankAccountForeign', 'testAddBankAccountErrCurrency', 
+                          'testAddBankAccountErrZone', 'testAddBankAccountUnGST', 'testAddBankAccountMultiOrg',
+                          'testAddBankAccountSpecialNum', 'testAddBankAccountSpecialName', 'testAddBankAccountLongNum',
+                          'testAddBankAccountLongName', 'testAddMultiBankAccounts', 'testAddMultiAccountsSameName', 
+                          'testAddMultiAccountsSameNum',]
                            
         self.org_dict = {}
         self.account_dict = {}
         self.orgObj = OrganizationOps(self.driver, self.logger, self.configObj)
         self.org_dicts = []
+
+        self.is_foreign = False
+        self.err_currenry = False
+        self.sepcial_num = False
+        self.sepcial_name = False
+        
         
     def setup(self):
         result = super(TestBankAccountOps, self).setup()
@@ -46,7 +52,6 @@ class TestBankAccountOps(TestObject):
     def cleanup(self):
         self.orgObj.setDriver(self.driver)
         self.orgObj.cancleAllOrganization("Added by mistake")
-        TestBankAccountOps.ORG_CUSTOMIZED = False
     
     def showBankAccounts(self):
         """
@@ -236,26 +241,7 @@ class TestBankAccountOps(TestObject):
                 self.logger.debug("input account type %s", account_type)
                 id = type_elems[index].get_attribute('id')
                 self.driver = setReadOnlyElemVal(self.driver, id, account_type)
-                """
-                type_elems[index].click()
                 time.sleep(5)
-                
-                elem_i = '0'
-                if account_type in "Everyday (day-to-day)":
-                    elem_i = '0'
-                elif account_type in "Loan":
-                    elem_i = '1'
-                elif account_type in "Term Deposit":
-                    elem_i = '2'
-                elif account_type in "Credit Card":
-                    elem_i = '3'
-                else:
-                    elem_i = '4'
-                type_js = "document.querySelectorAll('.ba-combo-list-item')["+elem_i+"].click()"
-                self.driver.execute_script(type_js)
-                """
-                time.sleep(5)
-                
                 index += 1
                 
             xpath = "//input[contains(@id,'accountname')]"
@@ -305,7 +291,7 @@ class TestBankAccountOps(TestObject):
     def customizeDict(self, val_dict):
         """
         customize account info into dicts
-        @account_dict£ºeach item can be splitted by ","
+        @account_dict: each item can be splitted by ","
         @@return data_dicts
         """
         to_be_customized = 0
@@ -335,7 +321,6 @@ class TestBankAccountOps(TestObject):
     def baseTestAddBankAccount(self):
         """
         basic test process of adding bank account
-        @data_dicts£ºadd bank accounts for all organizations
         @@return True for success; False for otherwise
         """
         result = True
@@ -344,15 +329,13 @@ class TestBankAccountOps(TestObject):
             self.logger.info("STEP: create organizations")
             self.org_dicts = self.customizeDict(self.org_dict)
    
-            if not TestBankAccountOps.ORG_CUSTOMIZED: 
-                self.logger.debug("will create %d organizations", len(self.org_dicts))
-                for org_dict in self.org_dicts:
-                    self.orgObj.setDriver(self.driver)
-                    self.orgObj.addOrganization(org_dict, 
-                                                                  ["countryCmb", 
-                                                                   "cmbTimeZone", 
-                                                                   "currencyCmb"])
-                TestBankAccountOps.ORG_CUSTOMIZED = True
+            self.logger.debug("will create %d organizations", len(self.org_dicts))
+            for org_dict in self.org_dicts:
+                self.orgObj.setDriver(self.driver)
+                self.orgObj.addOrganization(org_dict, 
+                                                      ["countryCmb", 
+                                                       "cmbTimeZone", 
+                                                       "currencyCmb"])
                         
             self.logger.info("STEP: add bank account")
             data_dicts = self.customizeDict(self.account_dict)
@@ -393,35 +376,115 @@ class TestBankAccountOps(TestObject):
         time limitation
     """            
     
-    def testAddBankAccountBasic(self):
-        return self.baseTestAddBankAccount()            
+    def testAddBankAccountLocal(self):
+        """
+        Add bank account for local organization.
+        For this user story, set location to be new zealand.
+        @@ return: True for success and False for otherwise.
+        """
+        self.is_foreign = False
+        return self.baseTestAddBankAccount()           
+
+    def testAddBankAccountForeign(self):
+        """
+        Add bank account for foreign organization.
+        For this user story, set location to be a country other 
+        than new zealand, e.g. China.
+        @@ return: True for failure as expected and False for otherwise,
+                   since should not find ANZ(NZ) in that country.
+        """
+        self.is_foreign = True
+        return self.baseTestAddBankAccount()    
+
+    def testAddBankAccountErrCurrency(self):
+        """
+        Add bank account for organization with currency set to be non-official one.
+        For this user story, set location to be China and set currency to be Bitcoin.
+        @@ return: True for failure as expected and False for otherwise.
+        """
+        self.err_currenry = True
+        return not self.baseTestAddBankAccount()    
+
+    def testAddBankAccountErrZone(self):
+        """
+        Add bank account for organization with time zone set to be error one.
+        For this user story, set location to be New Zealand and set time zone to be Beijing.
+        @@ return: True for success and False for otherwise.
+        """
+        return self.baseTestAddBankAccount()    
     
-    def testAddBankAccountUnicodeNum(self): 
-        result = True
-        try:
-            result = self.baseTestAddBankAccount()
-        except Exception, e:
-            result = False
-        return ( not result )
-        
-    def testAddBankAccountUnicodeName(self):  
-        return self.baseTestAddBankAccount()
-    
+    def testAddBankAccountUnGST(self):
+        """
+        Add bank account for organization with GST disabled.
+        @@ return: True for success and False for otherwise.
+        """
+        self.orgObj.setGST(0)
+        return self.baseTestAddBankAccount()  
+
+
+    def testAddBankAccountMultiOrg(self):
+        """
+        Add bank account for local organizations.
+        @@ return: True for success and False for otherwise.
+        """
+        return self.baseTestAddBankAccount()          
+
+
+    def testAddBankAccountSpecialNum(self):
+        """
+        Add bank account with number in special characters.
+        @@ return: True for failure and False for otherwise.
+        """
+        return self.baseTestAddBankAccount()  
+
+
+    def testAddBankAccountSpecialName(self):
+        """
+        Add bank account with name in special characters.
+        @@ return: True for failure and False for otherwise.
+        """
+        return self.baseTestAddBankAccount() 
+
+   
     def testAddBankAccountLongNum(self):   
+        """
+        Add bank account with number longer than 20.
+        Number longer than 20 should be truncated to 20.
+        @@ return: True for success and False for otherwise.
+        """
         return self.baseTestAddBankAccount()
     
-    def testAddBankAccountLongName(self):   
+
+    def testAddBankAccountLongName(self):
+        """
+        Add bank account with name longer than 30.
+        Name longer than 30 should be truncated wot 30.
+        @@ return: True for success and False for otherwise.
+        """   
         return self.baseTestAddBankAccount()
+
                 
     def testAddMultiBankAccounts(self):  
+        """
+        Add multiple valid different bank accounts.
+        @@ return: True for success and False for otherwise.
+        """   
         return self.baseTestAddBankAccount()
     
-    def testAddMultiSameBankAccount(self): 
-        result = True
-        try:
-            result = self.baseTestAddBankAccount()
-        except Exception, e:
-            result = False
-        return ( not result )
+
+    def testAddMultiAccountsSameName(self): 
+        """
+        Add multiple valid different bank accounts with same names.
+        @@ return: True for failure expected and False for otherwise.
+        """   
+        return self.baseTestAddBankAccount()
+
+
+    def testAddMultiAccountsSameNum(self): 
+        """
+        Add multiple valid different bank accounts with same numbers.
+        @@ return: True for failure expected and False for otherwise.
+        """   
+        return self.baseTestAddBankAccount()
     
         

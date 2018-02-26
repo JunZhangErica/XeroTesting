@@ -116,6 +116,7 @@ class TestObject(object):
             chromeOptions = Options()
             chromeOptions.add_argument("window-size=1920x1080")
             chromeOptions.add_argument("--ignore-certificate-errors")
+            chromeOptions.add_argument("--dns-prefetch-disable")
             if os.name != 'nt':
                 self.driver = webdriver.Chrome(chrome_options=chromeOptions)
             else:
@@ -157,10 +158,15 @@ class TestObject(object):
         Do clean up after the test done
         """
         try:
+            self.logger.info("TEST_STEP: Log out")
+            logObj = LoginOut(self.driver, self.logger, self.configObj)
+            logObj.logout()
+            
             self.logger.info("TEST_STEP: Quit browser")
             self.driver.quit()
             time.sleep(5)
             self.driver = None
+
         except Exception, e:
             self.logger.warning("Failed on cleanup with exception %s", traceback.format_exc())
             

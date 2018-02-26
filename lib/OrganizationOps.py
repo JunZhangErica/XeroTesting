@@ -30,6 +30,9 @@ class OrganizationOps(object):
         
     def setDriver(self, driver):
         self.driver = driver
+
+    def setGST(self, enabled=True):
+        self.is_GST = enabled
         
     def showOrganizationList(self):
         """
@@ -43,24 +46,15 @@ class OrganizationOps(object):
                 self.driver.find_element_by_xpath(xpath)
                 return True
             except Exception, e:
-                self.logger.info("STEP: show organization list")
+                try:
+                    self.driver.find_element_by_link_text("Start Trial")
+                    return True
+                except Exception, e:
+                    self.logger.info("STEP: show organization list")
             
             my_dashboard = "https://my.xero.com/"
             self.driver.get(my_dashboard)
-            
-            """    
-            self.logger.debug("Step: select Account and Home")
-            xpath = "//div[@class='xn-h-user']/a[@class='username']"
-            account_elem = self.driver.find_element_by_xpath(xpath)
-            account_elem.click()
-            
-            myaccount = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, "Account")))
-            myaccount.click()
-            
-            xpath = "//a[@href ='/!xkcD/Dashboard'][text()='Home']"
-            home_elem = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
-            home_elem.click()
-            """
+
             try:            
                 self.logger.debug("Step: verify that organization list shows up")
                 xpath = "//a[contains(text(), 'Add an organisation')]"
@@ -163,6 +157,14 @@ class OrganizationOps(object):
                 for index in org_dict.keys():
                     self.logger.debug("key=%s, value=%s", index, org_dict[index])
             
+            if not self.is_gst:
+                try:
+                    self.driver.find_element_by_xpath("//input[@id='gstChk-inputEl']").click()
+                    time.sleep(2)
+                    org_dict = delDictwithKeyword(org_dict, key)
+                except Exception, e:
+                    self.logger.debug("GST property not available.")
+
             sorted_keys = org_dict.keys()
             for key in sorted_keys:
                 element = self.driver.find_element_by_xpath(key)

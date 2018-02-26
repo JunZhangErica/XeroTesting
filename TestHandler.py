@@ -112,7 +112,6 @@ def main():
                                    logger.info("Succeed to run test: %s - %s", mod_name, api_name)
                                except Exception, e:
                                    logger.debug("Failed to run test with exception: %s", traceback.format_exc())
-                                   testobj.cleanup()
                                    
                                    test_case_result = 1
                                    fail_num = fail_num + 1
@@ -125,12 +124,11 @@ def main():
                                test_case_result_list = [test_case_result, test_info]
                                buff_logger.stopCapture()
                                test_case_dicts[api_name] = test_case_result_list
+                               testobj.cleanup()
 
                        
                        # collect test class results
                        result_dicts[mod_name] = test_case_dicts
-                       
-                       testobj.cleanup()
                        
                        # get driver object and pass it to next test group
                        driver = testobj.getDriver()
