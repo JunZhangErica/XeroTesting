@@ -143,11 +143,13 @@ class OrganizationOps(object):
             
             if not self.addOrgShown():
                 self.showOrganizationList()
-                
-                self.logger.debug("Step: open window of adding organization")
-                xpath = "//a[contains(text(), 'Add an organisation')]"
-                self.driver.find_element_by_xpath(xpath).click()
-                
+                try:
+                    self.logger.debug("Step: open window of adding organization")
+                    xpath = "//a[contains(text(), 'Add an organisation')]"
+                    self.driver.find_element_by_xpath(xpath).click()
+                except Exception, e:
+                    self.logger.debug("Perhaps current no organization available. ")
+                    
                 self.logger.debug("Step: verify that the proper web page is loaded")
                 WebDriverWait(self.driver, 30).until(
                     EC.visibility_of_element_located((By.LINK_TEXT, "Start Trial")))
