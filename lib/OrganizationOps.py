@@ -1,3 +1,33 @@
+"""
+Copyright (c) 2018-2021, Jun Zhang
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+* Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+* Neither the name Wai Yip Tung nor the names of its contributors may be
+  used to endorse or promote products derived from this software without
+  specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
 #coding=utf-8
 
 import traceback
@@ -27,13 +57,25 @@ class OrganizationOps(object):
         self.driver = driver
         self.logger = logger
         self.configObj = configObj
-        self.is_GST = True
+        self.is_gst = True
         
     def setDriver(self, driver):
         self.driver = driver
 
     def setGST(self, enabled=True):
-        self.is_GST = enabled
+        self.is_gst = enabled
+        
+    def addOrgShown(self):
+        """
+        check if organization list has been shown
+        @@return: True for shown and False for otherwise
+        """
+        try:
+            self.driver.find_element_by_link_text("Start Trial")
+            return True
+        except Exception, e:
+            self.logger.info("STEP: show organization list")
+            return False
         
     def showOrganizationList(self):
         """
@@ -41,32 +83,21 @@ class OrganizationOps(object):
         @@return value: True for successful, False otherwise
         """
         result = True
+        xpath = "//a[contains(text(), 'Add an organisation')]"
         try:
-            try:
-                xpath = "//a[contains(text(), 'Add an organisation')]"
-                self.driver.find_element_by_xpath(xpath)
-                return True
-            except Exception, e:
-                try:
-                    self.driver.find_element_by_link_text("Start Trial")
-                    return True
-                except Exception, e:
-                    self.logger.info("STEP: show organization list")
-            
-            my_dashboard = "https://my.xero.com/"
-            self.driver.get(my_dashboard)
-
-            try:            
-                self.logger.debug("Step: verify that organization list shows up")
-                xpath = "//a[contains(text(), 'Add an organisation')]"
-                WebDriverWait(self.driver, 40).until(EC.visibility_of_element_located((By.XPATH, xpath)))
-            except TimeoutException:
-                self.driver.find_element_by_link_text("Start Trial")
+            self.logger.info("STEP: go to organization list page")
+            self.driver.find_element_by_xpath(xpath)
         except Exception, e:
-            self.logger.error("Failed on show organizations with exception: %s", traceback.format_exc())
-            result = False
-        return result 
-    
+            try:
+                my_dashboard = "https://my.xero.com/"
+                self.driver.get(my_dashboard)
+                
+                org_elem = WebDriverWait(self.driver, 20).until(
+                    EC.visibility_of_element_located((By.XPATH, xpath)))
+            except Exception, e:
+                return False
+            return True             
+        
     
     def checkOrganization(self, name):
         """
@@ -80,11 +111,13 @@ class OrganizationOps(object):
             if not result:
                 return result
             
-            WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, name)))
+            WebDriverWait(self.driver, 50).until(
+                EC.visibility_of_element_located((By.LINK_TEXT, name)))
             self.driver.find_element_by_link_text(name).click()
             
             xpath = "//h2[@class='org-name']/a[text()='"+name+"']"
-            WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+            WebDriverWait(self.driver, 30).until(
+                EC.visibility_of_element_located((By.XPATH, xpath)))
         except Exception, e:
             self.logger.error("Failed on show organization %s details with exception: %s", 
                               name, traceback.format_exc())
@@ -103,31 +136,33 @@ class OrganizationOps(object):
         self.logger.info("STEP: add an organization")
         result = True
         try:
+            # use a copied one instead of original one
             org_dict = {}
             for key in org_dict_in.keys():
                 org_dict[key] = org_dict_in[key]
-                
-            try:
-                self.driver.find_element_by_link_text("Start Trial")
-            except Exception, e:
-                result = self.showOrganizationList()
-                if not result:
-                    return result
+            
+            if not self.addOrgShown():
+                self.showOrganizationList()
                 
                 self.logger.debug("Step: open window of adding organization")
                 xpath = "//a[contains(text(), 'Add an organisation')]"
-                org_elem = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
-                org_elem.click()
+                self.driver.find_element_by_xpath(xpath).click()
                 
                 self.logger.debug("Step: verify that the proper web page is loaded")
-                WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.LINK_TEXT, "Start Trial")))
+                WebDriverWait(self.driver, 30).until(
+                    EC.visibility_of_element_located((By.LINK_TEXT, "Start Trial")))
             
             self.logger.debug("Step: input all organization data and post request")
             if sorted_keys == None:
                 sorted_keys = org_dict.keys()
             
+            self.logger.debug("Step: input those that need to choose from menus")
             # for those items which needs to expand options for selection
-            for key in sorted_keys:                  
+            for key in sorted_keys: 
+                value = getValueforDict(org_dict, key)
+                if value == None:
+                    continue
+                                 
                 dict_key = getKeywithKeyword(org_dict, key)
                 self.logger.debug("dict_key=%s", dict_key)
                 self.logger.debug("Step: click button to show all options")
@@ -139,7 +174,6 @@ class OrganizationOps(object):
                     element.send_keys(org_dict[dict_key])
                     time.sleep(2)
                 except InvalidElementStateException: 
-                    sorted_keys.remove(key)
                     org_dict = delDictwithKeyword(org_dict, dict_key)
                     continue
                                 
@@ -147,25 +181,23 @@ class OrganizationOps(object):
                 xpath +="/ul/li[@class='x-boundlist-item']"
                 
                 try:
-                    element = WebDriverWait(self.driver, 10).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+                    element = WebDriverWait(self.driver, 10).until(
+                        EC.visibility_of_element_located((By.XPATH, xpath)))
                 except Exception, e:
-                    time.sleep(5)
+                    time.sleep(3)
                     element.send_keys(u'\ue007')
-                    time.sleep(5)
+                    time.sleep(3)
 
-                self.logger.debug("Step: remove this dict")
+                self.logger.debug("Step: remove already handled item from dict")
                 org_dict = delDictwithKeyword(org_dict, dict_key)
-                for index in org_dict.keys():
-                    self.logger.debug("key=%s, value=%s", index, org_dict[index])
             
+            self.logger.debug("Step: choose not to calculate GST")
             if not self.is_gst:
-                try:
-                    self.driver.find_element_by_xpath("//input[@id='gstChk-inputEl']").click()
-                    time.sleep(2)
-                    org_dict = delDictwithKeyword(org_dict, key)
-                except Exception, e:
-                    self.logger.debug("GST property not available.")
-
+                self.driver.find_element_by_xpath("//input[@id='gstChk-inputEl']").click()
+                time.sleep(2)
+                org_dict = delDictwithKeyword(org_dict, 'gstChk-inputEl')
+  
+            self.logger.debug("Step: input left items")
             sorted_keys = org_dict.keys()
             for key in sorted_keys:
                 element = self.driver.find_element_by_xpath(key)
@@ -175,7 +207,6 @@ class OrganizationOps(object):
                     element.send_keys(org_dict[key])
                     time.sleep(2)
                 except InvalidElementStateException: 
-                    sorted_keys.remove(key)
                     org_dict = delDictwithKeyword(org_dict, key)
                     continue
                 org_dict = delDictwithKeyword(org_dict, key)
@@ -185,12 +216,11 @@ class OrganizationOps(object):
             element.click()
             #NOTE: on my end, after clicking, the program hangs
             #      so just sleep here
-            time.sleep(60)
             
-            my_dashboard = "https://my.xero.com/"
-            self.driver.get(my_dashboard)
             xpath = "//a[@class='username']"
-            WebDriverWait(self.driver, 60).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+            WebDriverWait(self.driver, 60).until(
+                EC.visibility_of_element_located((By.XPATH, xpath)))
+              
         except Exception, e:
             self.logger.error("Failed on adding organization with exception: %s", traceback.format_exc())
             result = False
@@ -283,6 +313,24 @@ class OrganizationOps(object):
                 elems_len = elems_after
                 
         except Exception, e:
-            self.logger.warning("Failed on removing organization with exception: %s", traceback.format_exc())
+            self.logger.warning("Failed on removing organization with exception: %s", 
+                                traceback.format_exc())
         return result 
-   
+    
+    def checkAccountInOrgDashboard(self, name, number):
+        result = True
+        try:
+            self.checkOrganization(name)
+            
+            xpath = "//a[contains(@href,'Bank/BankTransactions.aspx?accountId')]"
+            element = self.driver.find_element_by_xpath(xpath)
+            xpath = "./h3[contains(@class,'xui-text-panelheading')][text()='"+name+"']"
+            element = element.find_element_by_xpath(xpath)
+            xpath = "./div[contains(@class,'xui-text-secondary')][text()='"+number+"']"
+            element = element.find_element_by_xpath(xpath)
+        except Exception, e:
+            self.logger.warning("Failed on removing organization with exception: %s", 
+                                traceback.format_exc())
+            result = False
+        return result
+            

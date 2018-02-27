@@ -1,9 +1,7 @@
 [testAddBankAccountLocal:org_dict]
 input_name_OrganisationName  = QATest1
 input_id_countryCmb-inputEl = New Zealand
-input_id_cmbTimeZone-inputEl = (UTC+12:00) Auckland
 input_id_*industrysearchcombofield = Marine Engineering
-input_id_currencyCmb-inputEl = New Zealand Dollar
 [testAddBankAccountLocal:account_dict]
 input_id_*xui-searchfield = ANZ (NZ)
 input_id_*accountname = abc
@@ -33,6 +31,9 @@ input_id_*xui-searchfield = ANZ (NZ)
 input_id_*accountname = cde
 input_id_*accounttype = Term Deposit
 input_id_*accountnumber = 2719894300
+[testAddBankAccountErrCurrency:variables]
+is_foreign = True
+
 
 [testAddBankAccountErrZone:org_dict]
 input_name_OrganisationName  = QATest1

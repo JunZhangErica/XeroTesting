@@ -1,6 +1,6 @@
 [chrome_conf]
-#path = F:\tools\chromedriver.exe
-path = 
+path = F:\tools\chromedriver.exe
+#path = 
 
 [xero_web]
 login_user = immizhj@gmail.com

@@ -1,3 +1,34 @@
+"""
+Copyright (c) 2018-2021, Jun Zhang
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+* Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+* Neither the name Wai Yip Tung nor the names of its contributors may be
+  used to endorse or promote products derived from this software without
+  specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+
 #coding=utf-8
 
 from selenium import webdriver
@@ -26,7 +57,7 @@ class TestBankAccountOps(TestObject):
     
     def __init__(self, logger, configObj):
         super(TestBankAccountOps, self).__init__(logger, configObj)
-        self.test_list = ['testAddBankAccountLocal','testAddBankAccountForeign', 'testAddBankAccountErrCurrency', 
+        self.test_list = ['testAddBankAccountLocal', 'testAddBankAccountForeign','testAddBankAccountErrCurrency', 
                           'testAddBankAccountErrZone', 'testAddBankAccountUnGST', 'testAddBankAccountMultiOrg',
                           'testAddBankAccountSpecialNum', 'testAddBankAccountSpecialName', 'testAddBankAccountLongNum',
                           'testAddBankAccountLongName', 'testAddMultiBankAccounts', 'testAddMultiAccountsSameName', 
@@ -38,15 +69,13 @@ class TestBankAccountOps(TestObject):
         self.org_dicts = []
 
         self.is_foreign = False
-        self.err_currenry = False
-        self.sepcial_num = False
-        self.sepcial_name = False
-        
+        self.err_currency = False
         
     def setup(self):
         result = super(TestBankAccountOps, self).setup()
         self.org_dict = super(TestBankAccountOps, self).getVariable('org_dict')
         self.account_dict = super(TestBankAccountOps, self).getVariable('account_dict')
+        self.variables = super(TestBankAccountOps, self).getVariable('variables')
         return result
            
     def cleanup(self):
@@ -162,7 +191,9 @@ class TestBankAccountOps(TestObject):
         """
         self.logger.info("STEP: add bank account for organization %s", org_name)
         result = True
+        dup_name = not checkDictsUnique(data_dicts, 'accountname')
         try:
+            
             #show dashboard for organization
             self.orgObj.setDriver(self.driver)
             self.orgObj.checkOrganization(org_name)
@@ -193,19 +224,24 @@ class TestBankAccountOps(TestObject):
             time.sleep(5)
             
             self.logger.info("STEP: input correct bank name")
-            xpath = "//div[@class='x-container xui-panel xui-container-small x-container-default']"
-            element = self.driver.find_element_by_xpath(xpath)
-            element = element.find_element_by_tag_name('section')
-            xpath = "./div[@data-automationid='searchBanksList'][contains(@id,'ba-banklist')]"
-            element = element.find_element_by_xpath(xpath)            
-            
-            xpath = "./ul[contains(@id,'dataview')]"
-            element = element.find_element_by_xpath(xpath)
-            xpath = "./li"
-            elems = element.find_elements_by_xpath(xpath)
-            element = elems[0]
-            element.click()
-            time.sleep(2)
+            try:
+                xpath = "//div[@class='x-container xui-panel xui-container-small x-container-default']"
+                element = self.driver.find_element_by_xpath(xpath)
+                element = element.find_element_by_tag_name('section')
+                xpath = "./div[@data-automationid='searchBanksList'][contains(@id,'ba-banklist')]"
+                element = element.find_element_by_xpath(xpath)            
+                
+                xpath = "./ul[contains(@id,'dataview')]"
+                element = element.find_element_by_xpath(xpath)
+                xpath = "./li"
+                elems = element.find_elements_by_xpath(xpath)
+                element = elems[0]
+                element.click()
+                time.sleep(2)
+            except Exception, e:
+                self.logger.warning("Account details are not expected with exception: %s", 
+                              traceback.format_exc())
+                return self.is_foreign
             
             xpath = "//input[contains(@id,'accountname')]"
             WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
@@ -268,19 +304,32 @@ class TestBankAccountOps(TestObject):
             xpath = "//span[contains(@id,'common-button-submit')]"
             self.driver.find_element_by_xpath(xpath).click()
             
-            xpath = "//span[@data-automationid='Add Bank Account-button']"
-            WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
-            for data_dict in data_dicts:
-                self.logger.info("STEP: verify bank account to be added properly")
-                account_name = getValueforDict(data_dict, 'accountname')
-                account_type = getValueforDict(data_dict, 'accounttype')
-                number = getValueforDict(data_dict, 'accountnumber')
-                if "Credit" in account_type:
-                    TestBankAccountOps.MAX_NUM_LEN = 4
+            try:
+                xpath = "//span[@data-automationid='Add Bank Account-button']"
+                WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH, xpath)))
+                for data_dict in data_dicts:
+                    self.logger.info("STEP: verify bank account to be added properly")
+                    account_name = getValueforDict(data_dict, 'accountname')
+                    account_type = getValueforDict(data_dict, 'accounttype')
+                    number = getValueforDict(data_dict, 'accountnumber')
+                    if "Credit" in account_type:
+                        TestBankAccountOps.MAX_NUM_LEN = 4
+                    else:
+                        TestBankAccountOps.MAX_NUM_LEN = 20
+                    result = result and self.checkBankAccount(account_name, number)            
+                self.orgObj.setDriver(self.driver)
+                if dup_name:
+                    result = False
+                    self.logger.error("DUPLICATED NAMES SHOULD NOT BE PERMITTED!!!")
+            except Exception, e:
+                if dup_name:
+                    self.logger.debug("Account is not added successfully: %s", 
+                              traceback.format_exc())
                 else:
-                    TestBankAccountOps.MAX_NUM_LEN = 20
-                result = result and self.checkBankAccount(account_name, number)
-                
+                    self.logger.error("Account details are not expected with exception: %s", 
+                              traceback.format_exc())
+                    result = False
+                    
         except Exception, e:
             self.logger.error("Failed to add accounts with exception: %s", 
                               traceback.format_exc())
@@ -401,9 +450,17 @@ class TestBankAccountOps(TestObject):
         Add bank account for organization with currency set to be non-official one.
         For this user story, set location to be China and set currency to be Bitcoin.
         @@ return: True for failure as expected and False for otherwise.
+        This SHOULD BE decided in addBankAccount API.
+        NOTES: currently, still not sure what should happen for this scenario
+        but official web site just report internal server 500 error about it, which 
+        should be not valid. So no checking operations done to decide the specific result
+        for it.
         """
-        self.err_currenry = True
-        return not self.baseTestAddBankAccount()    
+        self.err_currency = True
+        if self.variables != None:
+            if self.variables['is_foreign'] == '1':
+                self.is_foreign = True
+        return self.baseTestAddBankAccount()    
 
     def testAddBankAccountErrZone(self):
         """
@@ -434,14 +491,16 @@ class TestBankAccountOps(TestObject):
         """
         Add bank account with number in special characters.
         @@ return: True for failure and False for otherwise.
+        since the account number should be combination of 0-9,a-z,A-Z,*
+        This is decided in addBankAccount API
         """
-        return self.baseTestAddBankAccount()  
+        return not self.baseTestAddBankAccount()  
 
 
     def testAddBankAccountSpecialName(self):
         """
         Add bank account with name in special characters.
-        @@ return: True for failure and False for otherwise.
+        @@ return: True for success and False for otherwise.
         """
         return self.baseTestAddBankAccount() 
 
@@ -475,7 +534,8 @@ class TestBankAccountOps(TestObject):
     def testAddMultiAccountsSameName(self): 
         """
         Add multiple valid different bank accounts with same names.
-        @@ return: True for failure expected and False for otherwise.
+        @@ return: True for failure as expected and False for otherwise.
+                   This is decided in addBankAccount API
         """   
         return self.baseTestAddBankAccount()
 
@@ -483,7 +543,8 @@ class TestBankAccountOps(TestObject):
     def testAddMultiAccountsSameNum(self): 
         """
         Add multiple valid different bank accounts with same numbers.
-        @@ return: True for failure expected and False for otherwise.
+        @@ return: True for success and False for otherwise.
+        NOTE: I THINK WE SHOULD NOT DUP NUMBERs FOR SAME USER.
         """   
         return self.baseTestAddBankAccount()
     

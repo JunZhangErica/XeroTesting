@@ -1,3 +1,33 @@
+"""
+Copyright (c) 2018-2021, Jun Zhang
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+* Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+* Neither the name Wai Yip Tung nor the names of its contributors may be
+  used to endorse or promote products derived from this software without
+  specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
 #coding=utf-8
 
 import traceback
@@ -31,9 +61,9 @@ class LoginOut(object):
             self.logger.info("STEP: click to open login window")
             xpath = "//a[contains(@href, 'login.xero.com')]"
             login_link = self.driver.find_element_by_xpath(xpath)
-            self.logger.debug("element text: %s", login_link.text)
             login_link.click()
             
+            self.logger.debug("Step: check window is loaded as expected")
             xpath = "//button[@type='submit'][contains(text(),Login)]"
             WebDriverWait(self.driver, 10).until(
                 EC.visibility_of_element_located((By.XPATH, xpath)))
@@ -67,6 +97,7 @@ class LoginOut(object):
             if not self.openLoginWin():
                 return False
 
+            self.logger.info("STEP: do login")
             login_info = self.configObj.getLoginInfo()
             user = login_info['user']
             password = login_info['pwd']
@@ -78,7 +109,7 @@ class LoginOut(object):
             self.driver.find_element_by_xpath("//button[@type='submit'][contains(text(), 'Login')]").click()
             
             # check expect result to match real-time result
-            self.logger.info("Step: check real-time result to be as expected")
+            self.logger.info("STEP: check real-time result to be as expected")
             login_evidence = None
             if login_type == 1:
                 self.logger.debug("Expected result: logged in Xero.com successfully!")
@@ -91,19 +122,19 @@ class LoginOut(object):
                         xpath = "//a[contains(text(), 'Add an organisation')]"
                         self.driver.find_element_by_xpath(xpath) 
                 except Exception, e:
-                    self.driver.find_element_by_link_text('Logout')
+                    self.driver.find_element_by_link_text("Start Trial")
                 LoginOut.HAS_LOGGEDIN = True
             else:
-                base_xpath = "//div[@class='x-boxed warning']"
+                xpath = "//div[@class='x-boxed warning']"
                 if login_type == 2:
                     self.logger.debug("Expected result: message to report wrong user name or password shows up")
-                    xpath = base_xpath + "/p[contains(text(), 'email or password is incorrect']"
+                    xpath += "/p[contains(text(), 'email or password is incorrect']"
                 elif login_type == 3:
                     self.logger.debug("Expected result: messages, that the account should be activated, shows up")
-                    xpath = base_xpath + "/p[contains(text(), 'Please activate your account']" 
+                    xpath += "/p[contains(text(), 'Please activate your account']" 
                 elif login_type == 4:
                     self.logger.debug("Expected result: messages, that account has already been locked, shows up") 
-                    xpath = base_xpath + "p[contains(text(), 'Your account has been temporarily locked']"  
+                    xpath += "/p[contains(text(), 'Your account has been temporarily locked']"  
                 WebDriverWait(self.driver, 20).until(
                     EC.visibility_of_element_located((By.XPATH, xpath)))                                             
         except Exception, e:
